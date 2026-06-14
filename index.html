@@ -46,7 +46,56 @@
     background:url('./assets/luma_ball.png') center/cover no-repeat;
     box-shadow:0 0 20px rgba(255,255,255,.5); animation:spin 8s linear infinite;}
   @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+  #ball-icon.pulse{animation:spin 8s linear infinite, pulseball .6s ease-out;}
+  @keyframes pulseball{0%{transform:scale(1)}40%{transform:scale(1.5)}100%{transform:scale(1)}}
   #round-label{font-size:clamp(9px,2.2vw,12px);opacity:.7;letter-spacing:2px;margin-top:2px;}
+
+  /* MUTE TOGGLE */
+  #mute-btn{position:absolute;top:8px;right:8px;z-index:5;border:1px solid rgba(244,217,160,.35);
+    background:rgba(15,12,30,.6);color:var(--astral-cream);border-radius:8px;
+    font-size:clamp(9px,2.2vw,11px);padding:5px 9px;cursor:pointer;letter-spacing:.5px;
+    backdrop-filter:blur(3px);}
+  #mute-btn:active{transform:scale(.95);}
+
+  /* FLYING BALL */
+  #fly-ball{position:fixed;width:46px;height:46px;border-radius:50%;
+    background:url('./assets/luma_ball.png') center/cover no-repeat;
+    box-shadow:0 0 24px rgba(255,255,255,.7); z-index:8; pointer-events:none;
+    opacity:0; left:0; top:0;}
+  #fly-ball.flying{opacity:1;}
+  @keyframes flyToGoal{
+    0%{opacity:1; transform:translate(0,0) scale(1) rotate(0deg);}
+    70%{opacity:1; transform:translate(var(--fx),var(--fy)) scale(1.3) rotate(540deg);}
+    100%{opacity:0; transform:translate(var(--fx),var(--fy)) scale(.4) rotate(620deg);}
+  }
+  @keyframes flyBlocked{
+    0%{opacity:1; transform:translate(0,0) scale(1) rotate(0deg);}
+    55%{opacity:1; transform:translate(var(--bx),var(--by)) scale(1.15) rotate(300deg);}
+    100%{opacity:0; transform:translate(calc(var(--bx)*.6),calc(var(--by)*1.4)) scale(.5) rotate(380deg);}
+  }
+
+  /* SCREEN EFFECTS */
+  #flash-overlay{position:fixed;inset:0;z-index:9;pointer-events:none;opacity:0;}
+  #flash-overlay.goal-flash{animation:goalFlash .7s ease-out;}
+  #flash-overlay.block-flash{animation:blockFlash .5s ease-out;}
+  @keyframes goalFlash{
+    0%{opacity:0; background:radial-gradient(circle, rgba(244,217,160,.55), transparent 70%);}
+    40%{opacity:1;}
+    100%{opacity:0;}
+  }
+  @keyframes blockFlash{
+    0%{opacity:0; background:radial-gradient(circle, rgba(138,107,214,.5), transparent 70%);}
+    35%{opacity:1;}
+    100%{opacity:0;}
+  }
+  body.shake{animation:shakeit .35s ease-in-out;}
+  @keyframes shakeit{
+    0%,100%{transform:translate(0,0);}
+    20%{transform:translate(-6px,3px);}
+    40%{transform:translate(5px,-4px);}
+    60%{transform:translate(-4px,2px);}
+    80%{transform:translate(3px,-2px);}
+  }
 
   /* MAIN PITCH */
   #pitch{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;
@@ -61,7 +110,20 @@
 
   .portrait{width:clamp(34px,9vw,52px);height:clamp(34px,9vw,52px);border-radius:50%;
     border:2px solid var(--astral-gold); flex-shrink:0; background-size:cover;background-position:center top;
-    box-shadow:0 0 8px rgba(244,217,160,.4);}
+    box-shadow:0 0 8px rgba(244,217,160,.4); transition:box-shadow .3s, border-color .3s;}
+  .portrait.charge-glow1{box-shadow:0 0 12px var(--astral-gold);}
+  .portrait.charge-glow2{box-shadow:0 0 18px var(--astral-gold), 0 0 8px var(--cyan); border-color:var(--cyan);}
+  .portrait.charge-glow3{box-shadow:0 0 26px var(--cyan), 0 0 14px var(--astral-gold); border-color:var(--cyan);
+    animation:breakthrough 1.4s ease-in-out infinite;}
+  @keyframes breakthrough{
+    0%,100%{filter:brightness(1) saturate(1);}
+    50%{filter:brightness(1.35) saturate(1.3);}
+  }
+  .lane.charging{animation:chargeFlash .35s ease-out;}
+  @keyframes chargeFlash{
+    0%{background:rgba(244,217,160,.25);}
+    100%{background:rgba(15,12,30,.55);}
+  }
 
   .lane-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
   .lane-name{font-size:clamp(10px,2.6vw,14px);font-weight:700;color:var(--astral-cream);
@@ -109,6 +171,9 @@
 </style>
 </head>
 <body>
+<div id="flash-overlay"></div>
+<div id="fly-ball"></div>
+<button id="mute-btn"></button>
 <div id="app">
   <div id="header">
     <h1 id="title"></h1>
@@ -155,6 +220,16 @@
   </div>
 </div>
 
+<!-- AUDIO HOOKS — drop your own files into ./assets/ with these exact names to enable sound -->
+<audio id="audio-bg" loop preload="none">
+  <source src="./assets/music-bg.mp3" type="audio/mpeg">
+</audio>
+<audio id="sfx-charge" preload="none"><source src="./assets/sfx-charge.mp3" type="audio/mpeg"></audio>
+<audio id="sfx-shoot" preload="none"><source src="./assets/sfx-shoot.mp3" type="audio/mpeg"></audio>
+<audio id="sfx-goal" preload="none"><source src="./assets/sfx-goal.mp3" type="audio/mpeg"></audio>
+<audio id="sfx-block" preload="none"><source src="./assets/sfx-block.mp3" type="audio/mpeg"></audio>
+<audio id="sfx-ai-goal" preload="none"><source src="./assets/sfx-ai-goal.mp3" type="audio/mpeg"></audio>
+
 <script type="module">
 import { STR } from "./strings.js";
 
@@ -200,6 +275,42 @@ document.getElementById("restart-btn").textContent = STR.playAgain;
 const pitch = document.getElementById("pitch");
 const statusEl = document.getElementById("status");
 const roundLabel = document.getElementById("round-label");
+
+// ---------- AUDIO ----------
+let muted = localStorage.getItem ? false : false; // no persistent storage in artifacts; default on
+muted = false;
+const audioBg = document.getElementById("audio-bg");
+const sfx = {
+  charge: document.getElementById("sfx-charge"),
+  shoot: document.getElementById("sfx-shoot"),
+  goal: document.getElementById("sfx-goal"),
+  block: document.getElementById("sfx-block"),
+  aiGoal: document.getElementById("sfx-ai-goal"),
+};
+function playSfx(name){
+  if(muted) return;
+  const el = sfx[name];
+  if(!el) return;
+  try{
+    el.currentTime = 0;
+    el.play().catch(()=>{}); // silently ignore if file missing or blocked
+  }catch(e){}
+}
+function startBgMusic(){
+  if(muted) return;
+  audioBg.volume = 0.35;
+  audioBg.play().catch(()=>{}); // ignore if no file / autoplay blocked
+}
+function stopBgMusic(){ audioBg.pause(); }
+
+const muteBtn = document.getElementById("mute-btn");
+function updateMuteBtn(){ muteBtn.textContent = muted ? STR.muteOff : STR.muteOn; }
+muteBtn.onclick = ()=>{
+  muted = !muted;
+  updateMuteBtn();
+  if(muted) stopBgMusic(); else startBgMusic();
+};
+updateMuteBtn();
 
 function laneRow(player, idx){
   const row = document.createElement("div");
@@ -262,6 +373,12 @@ function render(){
     shootBtn.disabled = disabled || state.charges[i] < 1;
     chargeBtn.disabled = disabled || state.charges[i] >= MAX_CHARGE;
     row.classList.remove("targeted","defended-reveal");
+
+    const portrait = row.querySelector(".portrait");
+    portrait.classList.remove("charge-glow1","charge-glow2","charge-glow3");
+    if(state.charges[i] === 1) portrait.classList.add("charge-glow1");
+    else if(state.charges[i] === 2) portrait.classList.add("charge-glow2");
+    else if(state.charges[i] >= 3) portrait.classList.add("charge-glow3");
   });
 }
 render();
@@ -282,6 +399,10 @@ function onLaneAction(idx, action){
     state.charges[idx] += 1;
     render();
     setStatus(STR.charged);
+    playSfx("charge");
+    const row = document.getElementById("lane-"+idx);
+    row.classList.remove("charging");
+    requestAnimationFrame(()=>row.classList.add("charging"));
     setTimeout(()=> resolveAITurn(null), 350);
     return;
   }
@@ -292,10 +413,38 @@ function onLaneAction(idx, action){
   }
 }
 
+function flyBall(fromEl, toEl, success){
+  const flyBall = document.getElementById("fly-ball");
+  const fromRect = fromEl.getBoundingClientRect();
+  const toRect = toEl.getBoundingClientRect();
+  const startX = fromRect.left + fromRect.width/2 - 23;
+  const startY = fromRect.top + fromRect.height/2 - 23;
+  const endX = toRect.left + toRect.width/2 - 23;
+  const endY = toRect.top + toRect.height/2 - 23;
+  const dx = endX - startX, dy = endY - startY;
+
+  flyBall.style.left = startX+"px";
+  flyBall.style.top = startY+"px";
+  flyBall.style.animation = "none";
+  flyBall.classList.remove("flying");
+  flyBall.style.setProperty("--fx", dx+"px");
+  flyBall.style.setProperty("--fy", dy+"px");
+  flyBall.style.setProperty("--bx", (dx*0.5)+"px");
+  flyBall.style.setProperty("--by", (dy*0.5)+"px");
+
+  requestAnimationFrame(()=>{
+    flyBall.classList.add("flying");
+    flyBall.style.animation = success
+      ? "flyToGoal .7s cubic-bezier(.3,.6,.4,1) forwards"
+      : "flyBlocked .55s cubic-bezier(.3,.6,.4,1) forwards";
+  });
+}
+
 function resolveShot(idx){
   state.resolving = true;
   render();
   setStatus(STR.aiDefending);
+  playSfx("shoot");
 
   // AI picks a lane to defend - weighted toward lanes with higher charge (smarter over time)
   const weights = state.charges.map(c => 1 + c*1.5);
@@ -314,20 +463,38 @@ function resolveShot(idx){
       document.getElementById("lane-"+defendIdx).classList.add("defended-reveal");
     }
 
-    if(!blocked){
-      state.astralScore += 1;
-      setStatus(STR.goalScored, "flash-good");
-    } else {
-      setStatus(STR.goalBlocked, "flash-bad");
-    }
-    state.charges[idx] = 0;
-    render();
+    // fly the ball from the shooting lane's portrait to the scoreboard ball icon
+    const fromEl = row.querySelector(".portrait");
+    const toEl = document.getElementById("ball-icon");
+    flyBall(fromEl, toEl, !blocked);
 
     setTimeout(()=>{
-      checkGameOver();
-      if(state.over) return;
-      resolveAITurn(null);
-    }, 900);
+      if(!blocked){
+        state.astralScore += 1;
+        setStatus(STR.goalScored, "flash-good");
+        playSfx("goal");
+        document.getElementById("flash-overlay").classList.remove("goal-flash","block-flash");
+        requestAnimationFrame(()=>document.getElementById("flash-overlay").classList.add("goal-flash"));
+        const ballIcon = document.getElementById("ball-icon");
+        ballIcon.classList.remove("pulse");
+        requestAnimationFrame(()=>ballIcon.classList.add("pulse"));
+      } else {
+        setStatus(STR.goalBlocked, "flash-bad");
+        playSfx("block");
+        document.getElementById("flash-overlay").classList.remove("goal-flash","block-flash");
+        requestAnimationFrame(()=>document.getElementById("flash-overlay").classList.add("block-flash"));
+        document.body.classList.remove("shake");
+        requestAnimationFrame(()=>document.body.classList.add("shake"));
+      }
+      state.charges[idx] = 0;
+      render();
+
+      setTimeout(()=>{
+        checkGameOver();
+        if(state.over) return;
+        resolveAITurn(null);
+      }, 700);
+    }, blocked ? 480 : 620);
   }, 700);
 }
 
@@ -342,6 +509,11 @@ function resolveAITurn(){
     if(rand() < scoreChance){
       state.obsidianScore += 1;
       setStatus(STR.aiGoal, "flash-bad");
+      playSfx("aiGoal");
+      document.getElementById("flash-overlay").classList.remove("goal-flash","block-flash");
+      requestAnimationFrame(()=>document.getElementById("flash-overlay").classList.add("block-flash"));
+      document.body.classList.remove("shake");
+      requestAnimationFrame(()=>document.body.classList.add("shake"));
     } else {
       setStatus(STR.aiBlocked, "flash-good");
     }
@@ -376,6 +548,7 @@ function showEnd(){
 // ---------- OVERLAYS ----------
 document.getElementById("start-btn").onclick = ()=>{
   document.getElementById("intro-overlay").classList.add("hidden");
+  startBgMusic();
 };
 document.getElementById("restart-btn").onclick = ()=>{
   state = { astralScore:0, obsidianScore:0, round:1, charges:ASTRAL.map(()=>0), resolving:false, over:false };
